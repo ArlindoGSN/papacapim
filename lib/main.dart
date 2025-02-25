@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:papacapim/screens/login_screen.dart';
+import 'package:papacapim/screens/profile_screen.dart';
+import 'package:papacapim/screens/register_screen.dart';
 
 void main() {
   runApp(const PapacapimApp());
@@ -17,7 +19,7 @@ class PapacapimApp extends StatelessWidget {
         primarySwatch: Colors.green,
         useMaterial3: true,
       ),
-      home: const LoginScreen(),
+      home: const RegisterScreen(),
     );
   }
 }
