@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:papacapim/providers/auth_provider.dart';
+import 'package:papacapim/screens/login_screen.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -9,9 +12,26 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: 'Usuário Teste');
+  late final TextEditingController _nameController;
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(
+      text: context.read<AuthProvider>().user?['name'],
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,14 +39,39 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       appBar: AppBar(
         title: const Text('Editar Perfil'),
         actions: [
-          TextButton(
-            onPressed: () {
-              if (_formKey.currentState!.validate()) {
-                // Implementar atualização na segunda parte
-                Navigator.pop(context);
+          Consumer<AuthProvider>(
+            builder: (context, auth, child) {
+              if (auth.isLoading) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
               }
+              return TextButton(
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    try {
+                      await auth.updateProfile(
+                        _nameController.text,
+                        password: _passwordController.text.isNotEmpty
+                            ? _passwordController.text
+                            : null,
+                      );
+                      if (mounted) {
+                        Navigator.pop(context);
+                      }
+                    } catch (e) {
+                      setState(() {
+                        _errorMessage = e.toString();
+                      });
+                    }
+                  }
+                },
+                child: const Text('Salvar'),
+              );
             },
-            child: const Text('Salvar'),
           ),
         ],
       ),
@@ -74,44 +119,70 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   return null;
                 },
               ),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 16),
+                Text(
+                  _errorMessage!,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ],
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  // Implementar exclusão de conta na segunda parte
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Excluir conta'),
-                      content: const Text(
-                        'Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancelar'),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            // Implementar exclusão na segunda parte
-                            Navigator.pop(context);
-                            Navigator.pop(context);
-                          },
-                          child: const Text(
-                            'Excluir',
-                            style: TextStyle(color: Colors.red),
+              Consumer<AuthProvider>(
+                builder: (context, auth, child) {
+                  if (auth.isLoading) {
+                    return const CircularProgressIndicator();
+                  }
+                  return ElevatedButton(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Excluir conta'),
+                          content: const Text(
+                            'Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita.',
                           ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Cancelar'),
+                            ),
+                            TextButton(
+                              onPressed: () async {
+                                try {
+                                  await auth.deleteAccount();
+                                  if (mounted) {
+                                    Navigator.of(context).pushAndRemoveUntil(
+                                      MaterialPageRoute(
+                                        builder: (context) => const LoginScreen(),
+                                      ),
+                                      (route) => false,
+                                    );
+                                  }
+                                } catch (e) {
+                                  setState(() {
+                                    _errorMessage = e.toString();
+                                  });
+                                  Navigator.pop(context);
+                                }
+                              },
+                              child: const Text(
+                                'Excluir',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                    ),
+                    child: const Text(
+                      'Excluir Conta',
+                      style: TextStyle(color: Colors.white),
                     ),
                   );
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                ),
-                child: const Text(
-                  'Excluir Conta',
-                  style: TextStyle(color: Colors.white),
-                ),
               ),
             ],
           ),

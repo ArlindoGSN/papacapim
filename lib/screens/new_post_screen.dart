@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:papacapim/providers/posts_provider.dart';
 
 class NewPostScreen extends StatefulWidget {
   const NewPostScreen({super.key});
@@ -9,6 +11,7 @@ class NewPostScreen extends StatefulWidget {
 
 class _NewPostScreenState extends State<NewPostScreen> {
   final _messageController = TextEditingController();
+  String? _errorMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -16,30 +19,63 @@ class _NewPostScreenState extends State<NewPostScreen> {
       appBar: AppBar(
         title: const Text('Nova Postagem'),
         actions: [
-          TextButton(
-            onPressed: _messageController.text.isEmpty
-                ? null
-                : () {
-                    // Implementar criação de post na segunda parte
-                    Navigator.pop(context);
-                  },
-            child: const Text('Publicar'),
+          Consumer<PostsProvider>(
+            builder: (context, postsProvider, child) {
+              if (postsProvider.isLoading) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+              return TextButton(
+                onPressed: _messageController.text.isEmpty
+                    ? null
+                    : () async {
+                        try {
+                          await postsProvider
+                              .createPost(_messageController.text);
+                          if (mounted) {
+                            Navigator.pop(context);
+                          }
+                        } catch (e) {
+                          setState(() {
+                            _errorMessage = e.toString();
+                          });
+                        }
+                      },
+                child: const Text('Publicar'),
+              );
+            },
           ),
         ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: TextField(
-          controller: _messageController,
-          decoration: const InputDecoration(
-            hintText: 'O que está acontecendo?',
-            border: InputBorder.none,
-          ),
-          maxLines: null,
-          autofocus: true,
-          onChanged: (value) {
-            setState(() {});
-          },
+        child: Column(
+          children: [
+            TextField(
+              controller: _messageController,
+              decoration: const InputDecoration(
+                hintText: 'O que está acontecendo?',
+                border: InputBorder.none,
+              ),
+              maxLines: null,
+              autofocus: true,
+              onChanged: (value) {
+                setState(() {});
+              },
+            ),
+            if (_errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  _errorMessage!,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
+          ],
         ),
       ),
     );

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:papacapim/screens/login_screen.dart';
-import 'package:papacapim/screens/profile_screen.dart';
-import 'package:papacapim/screens/register_screen.dart';
+import 'package:papacapim/providers/auth_provider.dart';
+import 'package:papacapim/providers/posts_provider.dart';
+import 'package:papacapim/providers/profile_provider.dart';
 
 void main() {
   runApp(const PapacapimApp());
@@ -12,14 +14,20 @@ class PapacapimApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Papacapim',
-      theme: ThemeData(
-        primarySwatch: Colors.green,
-        useMaterial3: true,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => PostsProvider()),
+        ChangeNotifierProvider(create: (_) => ProfileProvider()),
+      ],
+      child: MaterialApp(
+        title: 'Papacapim',
+        theme: ThemeData(
+          primarySwatch: Colors.green,
+          useMaterial3: true,
+        ),
+        home: const LoginScreen(),
       ),
-      home: const RegisterScreen(),
     );
   }
 }

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:papacapim/providers/posts_provider.dart';
+import 'package:papacapim/providers/auth_provider.dart';
 
 class PostWidget extends StatelessWidget {
   final Map<String, dynamic> post;
@@ -13,6 +16,8 @@ class PostWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final DateTime createdAt = DateTime.parse(post['created_at']);
     final String timeAgo = timeago.format(createdAt, locale: 'pt_BR');
+    final currentUserLogin = context.read<AuthProvider>().user?['login'];
+    final isCurrentUserPost = post['user_login'] == currentUserLogin;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
@@ -51,10 +56,10 @@ class PostWidget extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.favorite_border),
                   onPressed: () {
-                    // Implementar curtida na segunda parte
+                    context.read<PostsProvider>().likePost(post['id']);
                   },
                 ),
-                Text('${post['likes_count']}'),
+                Text('${post['likes_count'] ?? 0}'),
                 const SizedBox(width: 16),
                 IconButton(
                   icon: const Icon(Icons.chat_bubble_outline),
@@ -62,21 +67,48 @@ class PostWidget extends StatelessWidget {
                     // Implementar resposta na segunda parte
                   },
                 ),
-                Text('${post['replies_count']}'),
+                Text('${post['replies_count'] ?? 0}'),
                 const Spacer(),
-                PopupMenuButton(
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Excluir'),
-                    ),
-                  ],
-                  onSelected: (value) {
-                    if (value == 'delete') {
-                      // Implementar exclusão na segunda parte
-                    }
-                  },
-                ),
+                if (isCurrentUserPost)
+                  PopupMenuButton(
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Text('Excluir'),
+                      ),
+                    ],
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Excluir postagem'),
+                            content: const Text(
+                              'Tem certeza que deseja excluir esta postagem?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Cancelar'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  context
+                                      .read<PostsProvider>()
+                                      .deletePost(post['id']);
+                                  Navigator.pop(context);
+                                },
+                                child: const Text(
+                                  'Excluir',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    },
+                  ),
               ],
             ),
           ],
