@@ -149,11 +149,11 @@ class ApiService {
 
   // Posts
   static Future<List<Map<String, dynamic>>> getPosts({
-    bool feed = false,
+    int feed = 0,
     String? search,
   }) async {
     final queryParams = <String, String>{};
-    if (feed) queryParams['feed'] = '1';
+    queryParams['feed'] = feed.toString();
     if (search != null) queryParams['search'] = search;
 
     final response = await http.get(

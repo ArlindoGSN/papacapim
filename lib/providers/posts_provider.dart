@@ -10,7 +10,7 @@ class PostsProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  Future<void> loadPosts({bool feed = false, String? search}) async {
+  Future<void> loadPosts({int feed = 0, String? search}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
