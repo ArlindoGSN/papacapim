@@ -1,9 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:papacapim/providers/posts_provider.dart';
 
 class PostsSearchBar extends StatefulWidget {
-  const PostsSearchBar({Key? key}) : super(key: key);
+  const PostsSearchBar({super.key});
 
   @override
   State<PostsSearchBar> createState() => _PostsSearchBarState();
@@ -11,72 +12,51 @@ class PostsSearchBar extends StatefulWidget {
 
 class _PostsSearchBarState extends State<PostsSearchBar> {
   final TextEditingController _searchController = TextEditingController();
-  bool _showOnlyFollowing = false; // feed=1 mostra apenas posts de quem o usuário segue
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      context.read<PostsProvider>().loadPosts(
+            search: query.trim(),
+            refresh: true,
+          );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Pesquisar posts...',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              _performSearch(context);
-                            },
-                          )
-                        : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                  ),
-                  onChanged: (_) => _performSearch(context),
-                ),
-              ),
-            ],
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'Buscar posts...',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    context
+                        .read<PostsProvider>()
+                        .loadPosts(refresh: true);
+                  },
+                )
+              : null,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(25),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Text('Mostrar apenas posts de quem eu sigo'),
-              const SizedBox(width: 8),
-              Switch(
-                value: _showOnlyFollowing,
-                onChanged: (value) {
-                  setState(() {
-                    _showOnlyFollowing = value;
-                    _performSearch(context);
-                  });
-                },
-              ),
-            ],
-          ),
-        ],
+        ),
+        onChanged: _onSearchChanged,
       ),
     );
-  }
-
-  void _performSearch(BuildContext context) {
-    final postsProvider = Provider.of<PostsProvider>(context, listen: false);
-    postsProvider.loadPosts(
-      feed: _showOnlyFollowing ? 1 : 0,
-      search: _searchController.text.isEmpty ? null : _searchController.text,
-    );
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 }

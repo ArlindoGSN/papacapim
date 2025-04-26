@@ -15,12 +15,48 @@ class FeedScreen extends StatefulWidget {
 }
 
 class _FeedScreenState extends State<FeedScreen> {
+  final ScrollController _scrollController = ScrollController();
+  bool _showingFollowingOnly = false; // Novo estado
+
   @override
   void initState() {
     super.initState();
     Future.microtask(() {
-      context.read<PostsProvider>().loadPosts(feed: 0);
+      context.read<PostsProvider>().loadPosts(feed: 0, refresh: true);
     });
+
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final postsProvider = context.read<PostsProvider>();
+    if (!postsProvider.isLoading && 
+        _scrollController.position.pixels >= 
+        _scrollController.position.maxScrollExtent * 0.8) {
+      postsProvider.loadPosts(
+        feed: _showingFollowingOnly ? 1 : 0, // Usa o valor correto do feed
+      );
+    }
+  }
+
+  Widget _buildLoadingIndicator() {
+    return const Padding(
+      padding: EdgeInsets.all(8.0),
+      child: Center(
+        child: SizedBox(
+          height: 32,
+          width: 32,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+    );
   }
 
   @override
@@ -29,6 +65,23 @@ class _FeedScreenState extends State<FeedScreen> {
       appBar: AppBar(
         title: const Text('Papacapim'),
         actions: [
+          // Adiciona botão para alternar entre feeds
+          IconButton(
+            icon: Icon(_showingFollowingOnly ? Icons.group : Icons.public),
+            onPressed: () {
+              setState(() {
+                _showingFollowingOnly = !_showingFollowingOnly;
+                // Recarrega os posts com o novo valor de feed
+                context.read<PostsProvider>().loadPosts(
+                  feed: _showingFollowingOnly ? 1 : 0,
+                  refresh: true,
+                );
+              });
+            },
+            tooltip: _showingFollowingOnly 
+              ? 'Mostrando posts de quem você segue'
+              : 'Mostrando todos os posts',
+          ),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
@@ -51,15 +104,15 @@ class _FeedScreenState extends State<FeedScreen> {
       ),
       body: Column(
         children: [
-          const PostsSearchBar(), // Adicione a barra de busca aqui
+          const PostsSearchBar(),
           Expanded(
             child: Consumer<PostsProvider>(
               builder: (context, postsProvider, child) {
-                if (postsProvider.isLoading) {
+                if (postsProvider.posts.isEmpty && postsProvider.isLoading) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                if (postsProvider.error != null) {
+                if (postsProvider.error != null && postsProvider.posts.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -71,7 +124,7 @@ class _FeedScreenState extends State<FeedScreen> {
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () {
-                            postsProvider.loadPosts();
+                            postsProvider.loadPosts(refresh: true);
                           },
                           child: const Text('Tentar novamente'),
                         ),
@@ -87,10 +140,26 @@ class _FeedScreenState extends State<FeedScreen> {
                 }
 
                 return RefreshIndicator(
-                  onRefresh: () => postsProvider.loadPosts(),
+                  onRefresh: () => postsProvider.loadPosts(refresh: true),
                   child: ListView.builder(
-                    itemCount: postsProvider.posts.length,
+                    controller: _scrollController,
+                    itemCount: postsProvider.posts.length + 1,
                     itemBuilder: (context, index) {
+                      if (index == postsProvider.posts.length) {
+                        if (!postsProvider.hasMorePosts) {
+                          return const Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Text(
+                              'Não há mais postagens para carregar',
+                              textAlign: TextAlign.center,
+                            ),
+                          );
+                        }
+                        if (postsProvider.isLoading) {
+                          return _buildLoadingIndicator();
+                        }
+                        return const SizedBox.shrink();
+                      }
                       return PostWidget(post: postsProvider.posts[index]);
                     },
                   ),

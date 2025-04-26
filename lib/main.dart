@@ -4,6 +4,7 @@ import 'package:papacapim/screens/login_screen.dart';
 import 'package:papacapim/providers/auth_provider.dart';
 import 'package:papacapim/providers/posts_provider.dart';
 import 'package:papacapim/providers/profile_provider.dart';
+import 'package:papacapim/providers/post_details_provider.dart';
 
 void main() {
   runApp(const PapacapimApp());
@@ -19,6 +20,7 @@ class PapacapimApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PostsProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
+        ChangeNotifierProvider(create: (_) => PostDetailsProvider()),
       ],
       child: MaterialApp(
         title: 'Papacapim',

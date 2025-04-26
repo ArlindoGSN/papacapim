@@ -9,6 +9,14 @@ class ApiService {
     _sessionToken = token;
   }
 
+  static Map<String, String> get headers {
+    final headers = {'Content-Type': 'application/json'};
+    if (_sessionToken != null) {
+      headers['x-session-token'] = _sessionToken!;
+    }
+    return headers;
+  }
+
   static Map<String, String> get _headers {
     final headers = {'Content-Type': 'application/json'};
     if (_sessionToken != null) {
@@ -151,10 +159,13 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> getPosts({
     int feed = 0,
     String? search,
+    int page = 1,
   }) async {
-    final queryParams = <String, String>{};
-    queryParams['feed'] = feed.toString();
-    if (search != null) queryParams['search'] = search;
+    final queryParams = <String, String>{
+      'page': page.toString(),
+      'feed': feed.toString(), // Garante que o parâmetro feed seja enviado
+      if (search != null && search.isNotEmpty) 'search': search,
+    };
 
     final response = await http.get(
       Uri.parse('$baseUrl/posts').replace(queryParameters: queryParams),
@@ -193,6 +204,56 @@ class ApiService {
 
     if (response.statusCode != 204) {
       throw Exception('Falha ao excluir post');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getReplies(int postId, {int page = 1}) async {
+    final queryParams = {'page': page.toString()};
+    
+    final response = await http.get(
+      Uri.parse('$baseUrl/posts/$postId/replies')
+          .replace(queryParameters: queryParams),
+      headers: _headers,
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.cast<Map<String, dynamic>>();
+    } else {
+      throw Exception('Falha ao carregar respostas');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getLikes(int postId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/posts/$postId/likes'),
+      headers: _headers,
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.cast<Map<String, dynamic>>();
+    } else {
+      throw Exception('Falha ao carregar curtidas');
+    }
+  }
+
+  static Future<Map<String, dynamic>> createReply(int postId, String message) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/posts'),
+      headers: _headers,
+      body: jsonEncode({
+        'post': {
+          'message': message,
+          'post_id': postId,
+        },
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Falha ao criar resposta');
     }
   }
 

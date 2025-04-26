@@ -5,18 +5,65 @@ class PostsProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _posts = [];
   bool _isLoading = false;
   String? _error;
+  int _currentPage = 1;
+  bool _hasMorePosts = true;
+  int _currentFeed = 0;
+  String? _currentSearch; // Novo campo para controlar a busca atual
 
   List<Map<String, dynamic>> get posts => _posts;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  bool get hasMorePosts => _hasMorePosts;
 
-  Future<void> loadPosts({int feed = 0, String? search}) async {
+  void _sortPosts() {
+    _posts.sort((a, b) {
+      final DateTime dateA = DateTime.parse(a['created_at']);
+      final DateTime dateB = DateTime.parse(b['created_at']);
+      return dateB.compareTo(dateA); // Ordem decrescente (mais recente primeiro)
+    });
+  }
+
+  Future<void> loadPosts({
+    int feed = 0,
+    String? search,
+    bool refresh = false,
+  }) async {
+    if (refresh) {
+      _currentPage = 1;
+      _posts = [];
+      _hasMorePosts = true;
+      _currentFeed = feed;
+      _currentSearch = search; // Atualiza o termo de busca
+    }
+
+    // Verifica se está tentando fazer uma nova busca
+    if (_currentSearch != search) {
+      _currentPage = 1;
+      _posts = [];
+      _hasMorePosts = true;
+      _currentSearch = search;
+    }
+
+    if (_isLoading || (!_hasMorePosts && !refresh)) return;
+
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      _posts = await ApiService.getPosts(feed: feed, search: search);
+      final newPosts = await ApiService.getPosts(
+        feed: _currentFeed,
+        search: _currentSearch,
+        page: _currentPage,
+      );
+
+      if (newPosts.isEmpty) {
+        _hasMorePosts = false;
+      } else {
+        _posts.addAll(newPosts);
+        _sortPosts(); // Ordena os posts após adicionar novos
+        _currentPage++;
+      }
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -32,7 +79,7 @@ class PostsProvider extends ChangeNotifier {
 
     try {
       final newPost = await ApiService.createPost(message);
-      _posts.insert(0, newPost);
+      _posts.insert(0, newPost); // Não precisa ordenar aqui pois posts novos já vão para o topo
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -85,4 +132,4 @@ class PostsProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-} 
+}
