@@ -5,7 +5,7 @@ class PostsProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _posts = [];
   bool _isLoading = false;
   String? _error;
-  int _currentPage = 1;
+  int _currentPage = 0;
   bool _hasMorePosts = true;
   int _currentFeed = 0;
   String? _currentSearch;
@@ -21,7 +21,7 @@ class PostsProvider extends ChangeNotifier {
     bool refresh = false,
   }) async {
     if (refresh) {
-      _currentPage = 1;
+      _currentPage = 0;
       _posts = [];
       _hasMorePosts = true;
       _currentFeed = feed;
@@ -44,7 +44,15 @@ class PostsProvider extends ChangeNotifier {
       if (newPosts.isEmpty) {
         _hasMorePosts = false;
       } else {
+        // Garante que cada novo post tenha um timestamp válido
+        for (final post in newPosts) {
+          if (!post.containsKey('created_at') || post['created_at'] == null) {
+            post['created_at'] = DateTime.now().toIso8601String();
+          }
+        }
+        
         _posts.addAll(newPosts);
+        // Força a ordenação após cada carregamento
         _sortPosts();
         _currentPage++;
       }

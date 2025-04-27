@@ -6,7 +6,7 @@ class PostService extends BaseService {
   static Future<List<Map<String, dynamic>>> getPosts({
     int feed = 0,
     String? search,
-    int page = 1,
+    int page = 0,
   }) async {
     final queryParams = <String, String>{
       'page': page.toString(),

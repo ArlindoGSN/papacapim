@@ -126,6 +126,31 @@ class _FeedScreenState extends State<FeedScreen> {
           ],
         ),
         actions: [
+          // Botão de atualização
+          Consumer<PostsProvider>(
+            builder: (context, postsProvider, _) => IconButton(
+              icon: postsProvider.isLoading
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: theme.colorScheme.primary,
+                    ),
+                  )
+                : Icon(
+                    Icons.refresh,
+                    color: theme.colorScheme.primary,
+                  ),
+              onPressed: postsProvider.isLoading
+                ? null
+                : () => postsProvider.loadPosts(
+                    feed: _showingFollowingOnly ? 1 : 0,
+                    refresh: true,
+                  ),
+              tooltip: 'Atualizar feed',
+            ),
+          ),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
             child: IconButton(
@@ -277,7 +302,51 @@ class _FeedScreenState extends State<FeedScreen> {
                 }
 
                 return RefreshIndicator(
-                  onRefresh: () => postsProvider.loadPosts(refresh: true),
+                  onRefresh: () async {
+                    // Mostra feedback visual
+                    final messenger = ScaffoldMessenger.of(context);
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            Icon(Icons.refresh, color: theme.colorScheme.onInverseSurface),
+                            const SizedBox(width: 10),
+                            const Text('Atualizando feed...'),
+                          ],
+                        ),
+                        duration: const Duration(milliseconds: 800),
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                      ),
+                    );
+                    
+                    // Atualiza os posts
+                    await postsProvider.loadPosts(
+                      feed: _showingFollowingOnly ? 1 : 0,
+                      refresh: true,
+                    );
+                    
+                    if (mounted) {
+                      // Feedback de sucesso
+                      messenger.hideCurrentSnackBar();
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.check_circle, color: theme.colorScheme.onInverseSurface),
+                              const SizedBox(width: 10),
+                              const Text('Feed atualizado!'),
+                            ],
+                          ),
+                          duration: const Duration(seconds: 1),
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: theme.colorScheme.secondaryContainer,
+                        ),
+                      );
+                    }
+                  },
+                  color: theme.colorScheme.primary,
+                  displacement: 40,
                   child: ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.only(bottom: 80),
