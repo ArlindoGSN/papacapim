@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:papacapim/services/api_service.dart';
+import 'package:papacapim/services/user_service.dart';
 
 class ProfileProvider extends ChangeNotifier {
   Map<String, dynamic>? _profile;
@@ -18,11 +18,10 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await ApiService.getUser(login);
-      _profile = response;
+      _profile = await UserService.getUser(login);
       await loadUserPosts(login);
     } catch (e) {
-      _error = e.toString();
+      _error = 'Falha ao carregar perfil: ${e.toString()}';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -31,42 +30,42 @@ class ProfileProvider extends ChangeNotifier {
 
   Future<void> loadUserPosts(String login) async {
     try {
-      _posts = await ApiService.getUserPosts(login);
+      _posts = await UserService.getUserPosts(login);
     } catch (e) {
-      _error = e.toString();
+      _error = 'Falha ao carregar posts: ${e.toString()}';
     }
     notifyListeners();
   }
 
   Future<void> followUser(String login) async {
     try {
-      await ApiService.followUser(login);
+      await UserService.followUser(login);
       if (_profile != null) {
         _profile = {
           ..._profile!,
-          'followers_count': (_profile!['followers_count'] ?? 0) + 1,
+          'following': true,
         };
       }
       notifyListeners();
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _error = 'Falha ao seguir usuário: ${e.toString()}';
+      rethrow;
     }
   }
 
   Future<void> unfollowUser(String login) async {
     try {
-      await ApiService.unfollowUser(login);
+      await UserService.unfollowUser(login);
       if (_profile != null) {
         _profile = {
           ..._profile!,
-          'followers_count': (_profile!['followers_count'] ?? 1) - 1,
+          'following': false,
         };
       }
       notifyListeners();
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _error = 'Falha ao deixar de seguir usuário: ${e.toString()}';
+      rethrow;
     }
   }
-} 
+}

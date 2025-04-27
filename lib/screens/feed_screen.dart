@@ -21,18 +21,46 @@ class _FeedScreenState extends State<FeedScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      context.read<PostsProvider>().loadPosts(feed: 0, refresh: true);
-    });
-
+    _initializeFeed();
     _scrollController.addListener(_onScroll);
   }
 
-  @override
-  void dispose() {
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
-    super.dispose();
+  Future<void> _initializeFeed() async {
+    await Future.microtask(() {
+      if (!mounted) return;
+      context.read<PostsProvider>().loadPosts(
+        feed: _showingFollowingOnly ? 1 : 0,
+        refresh: true,
+      );
+    });
+  }
+
+  Future<void> _toggleFeed() async {
+    setState(() {
+      _showingFollowingOnly = !_showingFollowingOnly;
+    });
+    
+    await context.read<PostsProvider>().loadPosts(
+      feed: _showingFollowingOnly ? 1 : 0,
+      refresh: true,
+    );
+  }
+
+  void _handleLogout() {
+    final navigator = Navigator.of(context);
+    final authProvider = context.read<AuthProvider>();
+    
+    // Não usa mais await já que não precisamos esperar nada
+    authProvider.logout().then((_) {
+      navigator.pushReplacementNamed('/login');
+    }).catchError((error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao fazer logout: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    });
   }
 
   void _onScroll() {
@@ -65,40 +93,20 @@ class _FeedScreenState extends State<FeedScreen> {
       appBar: AppBar(
         title: const Text('Papacapim'),
         actions: [
-          // Adiciona botão para alternar entre feeds
           IconButton(
             icon: Icon(_showingFollowingOnly ? Icons.group : Icons.public),
-            onPressed: () {
-              setState(() {
-                _showingFollowingOnly = !_showingFollowingOnly;
-                // Recarrega os posts com o novo valor de feed
-                context.read<PostsProvider>().loadPosts(
-                  feed: _showingFollowingOnly ? 1 : 0,
-                  refresh: true,
-                );
-              });
-            },
+            onPressed: _toggleFeed,
             tooltip: _showingFollowingOnly 
               ? 'Mostrando posts de quem você segue'
               : 'Mostrando todos os posts',
           ),
           IconButton(
             icon: const Icon(Icons.person),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ProfileScreen(),
-                ),
-              );
-            },
+            onPressed: () => _navigateToProfile(context),
           ),
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () {
-              context.read<AuthProvider>().logout();
-              Navigator.of(context).pushReplacementNamed('/login');
-            },
+            onPressed: _handleLogout,
           ),
         ],
       ),
@@ -179,6 +187,15 @@ class _FeedScreenState extends State<FeedScreen> {
           );
         },
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  void _navigateToProfile(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ProfileScreen(),
       ),
     );
   }

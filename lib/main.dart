@@ -5,8 +5,13 @@ import 'package:papacapim/providers/auth_provider.dart';
 import 'package:papacapim/providers/posts_provider.dart';
 import 'package:papacapim/providers/profile_provider.dart';
 import 'package:papacapim/providers/post_details_provider.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 void main() {
+  // Configura a localização em português
+  timeago.setLocaleMessages('pt_BR', timeago.PtBrMessages());
+  timeago.setDefaultLocale('pt_BR');
+
   runApp(const PapacapimApp());
 }
 

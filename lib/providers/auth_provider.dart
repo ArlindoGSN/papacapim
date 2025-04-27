@@ -1,37 +1,54 @@
 import 'package:flutter/foundation.dart';
-import 'package:papacapim/services/api_service.dart';
+import 'package:papacapim/services/auth_service.dart';
+import 'package:papacapim/services/user_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   Map<String, dynamic>? _user;
   bool _isLoading = false;
+  String? _error;
 
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _user != null;
   Map<String, dynamic>? get user => _user;
+  String? get error => _error;
 
   Future<void> login(String login, String password) async {
+    if (login.isEmpty || password.isEmpty) {
+      _error = 'Login e senha são obrigatórios';
+      notifyListeners();
+      return;
+    }
+
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
-      final session = await ApiService.login(login, password);
+      final data = await AuthService.login(login, password);
       _user = {
-        'login': session['user_login'],
-        // Adicionar outros dados do usuário conforme necessário
+        'login': data['user_login'],
+        'name': data['user_name'],
       };
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> register(String login, String name, String password) async {
+  Future<void> register(String userLogin, String name, String password) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
-      await ApiService.createUser(login, name, password);
-      await this.login(login, password);
+      await UserService.createUser(userLogin, name, password);
+      await login(userLogin, password);
+    } catch (e) {
+      _error = 'Falha ao criar conta: ${e.toString()}';
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -40,11 +57,15 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> updateProfile(String name, {String? password}) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
-      final updatedUser = await ApiService.updateUser(name, password: password);
+      final updatedUser = await UserService.updateUser(name, password: password);
       _user = updatedUser;
+    } catch (e) {
+      _error = 'Falha ao atualizar perfil: ${e.toString()}';
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -53,20 +74,30 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> deleteAccount() async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
-      await ApiService.deleteUser();
-      logout();
+      await UserService.deleteUser();
+      await logout();
+    } catch (e) {
+      _error = 'Falha ao excluir conta: ${e.toString()}';
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  void logout() {
-    _user = null;
-    ApiService.setSessionToken('');
-    notifyListeners();
+  Future<void> logout() async {
+    try {
+      AuthService.logout();
+      _user = null;
+      notifyListeners();
+    } catch (e) {
+      _error = 'Falha ao fazer logout: ${e.toString()}';
+      notifyListeners();
+      rethrow;
+    }
   }
-} 
+}

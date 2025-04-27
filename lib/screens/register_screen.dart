@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:papacapim/services/api_service.dart';
+import 'package:papacapim/services/user_service.dart'; // Atualizado para usar o novo serviço
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -35,7 +35,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      await ApiService.createUser(
+      await UserService.createUser( // Atualizado para usar UserService
         _loginController.text,
         _nameController.text,
         _passwordController.text,

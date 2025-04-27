@@ -11,17 +11,18 @@ class PostWidget extends StatelessWidget {
   final bool isInDetailsScreen;
 
   const PostWidget({
-    super.key,
     required this.post,
     this.isInDetailsScreen = false,
-  });
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final DateTime createdAt = DateTime.parse(post['created_at']);
-    final String timeAgo = timeago.format(createdAt, locale: 'pt_BR');
-    final currentUserLogin = context.read<AuthProvider>().user?['login'];
-    final isCurrentUserPost = post['user_login'] == currentUserLogin;
+    final String timeAgoText = timeago.format(createdAt, locale: 'pt_BR');
+    final bool isLiked = post['liked'] ?? false;
+    final String userLogin = post['user_login'] ?? '';
+    final bool isCurrentUserPost = context.read<AuthProvider>().user?['login'] == userLogin;
 
     return InkWell(
       onTap: isInDetailsScreen
@@ -47,20 +48,20 @@ class PostWidget extends StatelessWidget {
               Row(
                 children: [
                   CircleAvatar(
-                    child: Text(post['user_login'][0].toUpperCase()),
+                    child: Text(userLogin.isNotEmpty ? userLogin[0].toUpperCase() : '?'),
                   ),
                   const SizedBox(width: 8),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '@${post['user_login']}',
+                        '@$userLogin',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        timeAgo,
+                        timeAgoText,
                         style: TextStyle(
                           color: Colors.grey[600],
                           fontSize: 12,
@@ -79,28 +80,37 @@ class PostWidget extends StatelessWidget {
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.favorite_border),
+                    icon: isLiked 
+                        ? const Icon(Icons.thumb_up, color: Colors.green)
+                        : const Icon(Icons.thumb_up_outlined),
                     onPressed: () {
-                      context.read<PostsProvider>().likePost(post['id']);
+                      final postsProvider = context.read<PostsProvider>();
+                      if (isLiked) {
+                        postsProvider.unlikePost(post['id']);
+                      } else {
+                        postsProvider.likePost(post['id']);
+                      }
                     },
+                    tooltip: isLiked ? 'Descurtir' : 'Curtir',
                   ),
-                  Text('${post['likes_count'] ?? 0}'),
                   const SizedBox(width: 16),
                   IconButton(
                     icon: const Icon(Icons.chat_bubble_outline),
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ChangeNotifierProvider(
-                            create: (_) => PostDetailsProvider(),
-                            child: PostDetailsScreen(post: post),
+                      if (!isInDetailsScreen) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChangeNotifierProvider(
+                              create: (_) => PostDetailsProvider(),
+                              child: PostDetailsScreen(post: post),
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      }
                     },
+                    tooltip: 'Comentários',
                   ),
-                  Text('${post['replies_count'] ?? 0}'),
                   const Spacer(),
                   if (isCurrentUserPost)
                     PopupMenuButton(
