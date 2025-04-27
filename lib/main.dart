@@ -29,6 +29,7 @@ class PapacapimApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Papacapim',
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           primarySwatch: Colors.green,
           useMaterial3: true,

@@ -31,10 +31,14 @@ class ProfileProvider extends ChangeNotifier {
   Future<void> loadUserPosts(String login) async {
     try {
       _posts = await UserService.getUserPosts(login);
+      _error = null;
+      notifyListeners();
     } catch (e) {
       _error = 'Falha ao carregar posts: ${e.toString()}';
+      _posts = [];
+      notifyListeners();
+      rethrow;
     }
-    notifyListeners();
   }
 
   Future<void> followUser(String login) async {
@@ -66,6 +70,14 @@ class ProfileProvider extends ChangeNotifier {
     } catch (e) {
       _error = 'Falha ao deixar de seguir usuário: ${e.toString()}';
       rethrow;
+    }
+  }
+
+  Future<void> removePost(int postId) async {
+    final index = _posts.indexWhere((post) => post['id'] == postId);
+    if (index != -1) {
+      _posts.removeAt(index);
+      notifyListeners();
     }
   }
 }

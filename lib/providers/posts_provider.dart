@@ -75,12 +75,25 @@ class PostsProvider extends ChangeNotifier {
   }
 
   Future<void> deletePost(int postId) async {
-    try {
-      await PostService.deletePost(postId);
-      _posts.removeWhere((post) => post['id'] == postId);
+    if (postId <= 0) {
+      _error = 'ID do post inválido';
       notifyListeners();
+      return;
+    }
+
+    try {
+      // Primeiro faz a chamada à API
+      await PostService.deletePost(postId);
+      
+      // Se bem sucedido, remove localmente
+      final index = _posts.indexWhere((post) => post['id'] == postId);
+      if (index != -1) {
+        _posts.removeAt(index);
+        notifyListeners();
+      }
     } catch (e) {
       _error = 'Falha ao excluir post: ${e.toString()}';
+      notifyListeners();
       rethrow;
     }
   }

@@ -4,17 +4,54 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:papacapim/providers/posts_provider.dart';
 import 'package:papacapim/providers/auth_provider.dart';
 import 'package:papacapim/providers/post_details_provider.dart';
+import 'package:papacapim/providers/profile_provider.dart';
 import 'package:papacapim/screens/post_details_screen.dart';
 
 class PostWidget extends StatelessWidget {
   final Map<String, dynamic> post;
   final bool isInDetailsScreen;
+  final VoidCallback? onPostDeleted;
 
   const PostWidget({
     required this.post,
     this.isInDetailsScreen = false,
+    this.onPostDeleted,
     Key? key,
   }) : super(key: key);
+
+  Future<void> _handleDelete(BuildContext context) async {
+    try {
+      // Primeiro exclui o post na API via PostsProvider
+      await context.read<PostsProvider>().deletePost(post['id']);
+
+      // Notifica que o post foi excluído
+      onPostDeleted?.call();
+
+      if (context.mounted) {
+        // Se estiver na tela de detalhes, volta
+        if (isInDetailsScreen) {
+          Navigator.of(context).pop();
+        }
+
+        // Mostra mensagem de sucesso
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Post excluído com sucesso'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao excluir post: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,6 +106,56 @@ class PostWidget extends StatelessWidget {
                       ),
                     ],
                   ),
+                  const Spacer(),
+                  if (isCurrentUserPost)
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert),
+                      onSelected: (value) async {
+                        if (value == 'delete') {
+                          final shouldDelete = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Excluir post'),
+                              content: const Text(
+                                'Tem certeza que deseja excluir esta postagem? Esta ação não pode ser desfeita.'
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(false),
+                                  child: const Text('CANCELAR'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(true),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.red,
+                                  ),
+                                  child: const Text('EXCLUIR'),
+                                ),
+                              ],
+                            ),
+                          ) ?? false;
+
+                          if (shouldDelete) {
+                            await _handleDelete(context);
+                          }
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text(
+                                'Excluir',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -111,47 +198,6 @@ class PostWidget extends StatelessWidget {
                     },
                     tooltip: 'Comentários',
                   ),
-                  const Spacer(),
-                  if (isCurrentUserPost)
-                    PopupMenuButton(
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Text('Excluir'),
-                        ),
-                      ],
-                      onSelected: (value) {
-                        if (value == 'delete') {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Excluir postagem'),
-                              content: const Text(
-                                'Tem certeza que deseja excluir esta postagem?',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('Cancelar'),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    context
-                                        .read<PostsProvider>()
-                                        .deletePost(post['id']);
-                                    Navigator.pop(context);
-                                  },
-                                  child: const Text(
-                                    'Excluir',
-                                    style: TextStyle(color: Colors.red),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-                      },
-                    ),
                 ],
               ),
             ],
