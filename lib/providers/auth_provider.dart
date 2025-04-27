@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:papacapim/services/auth_service.dart';
 import 'package:papacapim/services/user_service.dart';
+import 'package:papacapim/services/base_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   Map<String, dynamic>? _user;
@@ -91,13 +92,20 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     try {
-      AuthService.logout();
+      _isLoading = true;
+      notifyListeners();
+
+      // Limpa dados locais
       _user = null;
-      notifyListeners();
+      BaseService.setSessionToken(null);
+      
+      _error = null;
     } catch (e) {
-      _error = 'Falha ao fazer logout: ${e.toString()}';
-      notifyListeners();
+      _error = 'Erro ao fazer logout: ${e.toString()}';
       rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 }

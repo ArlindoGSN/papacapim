@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:papacapim/screens/login_screen.dart';
+import 'package:papacapim/screens/feed_screen.dart';
 import 'package:papacapim/providers/auth_provider.dart';
 import 'package:papacapim/providers/posts_provider.dart';
 import 'package:papacapim/providers/profile_provider.dart';
@@ -34,7 +35,17 @@ class PapacapimApp extends StatelessWidget {
           primarySwatch: Colors.green,
           useMaterial3: true,
         ),
-        home: const LoginScreen(),
+        initialRoute: '/login',
+        routes: {
+          '/login': (context) => const LoginScreen(),
+          '/feed': (context) => const FeedScreen(),
+        },
+        onGenerateRoute: (settings) {
+          // Redireciona qualquer rota não encontrada para login
+          return MaterialPageRoute(
+            builder: (context) => const LoginScreen(),
+          );
+        },
       ),
     );
   }

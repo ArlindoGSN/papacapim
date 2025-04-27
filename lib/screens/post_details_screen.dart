@@ -51,26 +51,59 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Detalhes do Post'),
+        title: Text(
+          'Detalhes do Post',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: Column(
         children: [
           PostWidget(
             post: widget.post,
-            isInDetailsScreen: true, // Indica que está na tela de detalhes
+            isInDetailsScreen: true,
           ),
           Expanded(
             child: Consumer<PostDetailsProvider>(
               builder: (context, provider, child) {
                 if (provider.replies.isEmpty && provider.isLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
                 }
 
                 if (provider.error != null && provider.replies.isEmpty) {
                   return Center(
-                    child: Text('Erro: ${provider.error}'),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: theme.colorScheme.error,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Erro: ${provider.error}',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyLarge,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () => provider.loadReplies(
+                            widget.post['id'],
+                            refresh: true,
+                          ),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Tentar novamente'),
+                        ),
+                      ],
+                    ),
                   );
                 }
 
@@ -80,37 +113,72 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
                   itemBuilder: (context, index) {
                     if (index == provider.replies.length) {
                       if (provider.isLoading) {
-                        return const Center(child: CircularProgressIndicator());
+                        return const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Center(
+                            child: SizedBox(
+                              height: 32,
+                              width: 32,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        );
                       }
                       return const SizedBox.shrink();
                     }
 
                     final reply = provider.replies[index];
                     return Card(
-                      margin: const EdgeInsets.all(8),
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 8.0,
+                      ),
                       child: Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(16.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
                                 CircleAvatar(
-                                  child: Text(reply['user_login'][0].toUpperCase()),
+                                  backgroundColor: theme.colorScheme.primary,
+                                  child: Text(
+                                    reply['user_login'][0].toUpperCase(),
+                                    style: TextStyle(
+                                      color: theme.colorScheme.onPrimary,
+                                    ),
+                                  ),
                                 ),
-                                const SizedBox(width: 8),
-                                Text('@${reply['user_login']}'),
-                                const Spacer(),
-                                Text(
-                                  timeago.format(
-                                    DateTime.parse(reply['created_at']),
-                                    locale: 'pt_BR',
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '@${reply['user_login']}',
+                                        style: theme.textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        timeago.format(
+                                          DateTime.parse(reply['created_at']),
+                                          locale: 'pt_BR',
+                                        ),
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: theme.colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            Text(reply['message']),
+                            const SizedBox(height: 12),
+                            Text(
+                              reply['message'],
+                              style: theme.textTheme.bodyLarge,
+                            ),
                           ],
                         ),
                       ),
@@ -120,21 +188,45 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
               },
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: theme.shadowColor.withOpacity(0.1),
+                  offset: const Offset(0, -2),
+                  blurRadius: 4,
+                ),
+              ],
+            ),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _replyController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Escreva uma resposta...',
-                      border: OutlineInputBorder(),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      filled: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.send),
+                  icon: Icon(
+                    Icons.send,
+                    color: theme.colorScheme.primary,
+                  ),
                   onPressed: () {
                     if (_replyController.text.isNotEmpty) {
                       context.read<PostDetailsProvider>().createReply(

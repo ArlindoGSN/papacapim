@@ -4,7 +4,6 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:papacapim/providers/posts_provider.dart';
 import 'package:papacapim/providers/auth_provider.dart';
 import 'package:papacapim/providers/post_details_provider.dart';
-import 'package:papacapim/providers/profile_provider.dart';
 import 'package:papacapim/screens/post_details_screen.dart';
 
 class PostWidget extends StatelessWidget {
@@ -60,53 +59,62 @@ class PostWidget extends StatelessWidget {
     final bool isLiked = post['liked'] ?? false;
     final String userLogin = post['user_login'] ?? '';
     final bool isCurrentUserPost = context.read<AuthProvider>().user?['login'] == userLogin;
-
-    return InkWell(
-      onTap: isInDetailsScreen
-          ? null
-          : () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ChangeNotifierProvider(
-                    create: (_) => PostDetailsProvider(),
-                    child: PostDetailsScreen(post: post),
-                  ),
-                ),
-              );
-            },
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+    final theme = Theme.of(context);
+    
+    return Card(
+      margin: const EdgeInsets.symmetric(
+        horizontal: 16.0,
+        vertical: 8.0,
+      ),
+      child: InkWell(
+        onTap: isInDetailsScreen ? null : () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChangeNotifierProvider(
+                create: (_) => PostDetailsProvider(),
+                child: PostDetailsScreen(post: post),
+              ),
+            ),
+          );
+        },
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   CircleAvatar(
-                    child: Text(userLogin.isNotEmpty ? userLogin[0].toUpperCase() : '?'),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '@$userLogin',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
+                    backgroundColor: theme.colorScheme.primary,
+                    child: Text(
+                      userLogin.isNotEmpty ? userLogin[0].toUpperCase() : '?',
+                      style: TextStyle(
+                        color: theme.colorScheme.onPrimary,
+                        fontWeight: FontWeight.bold,
                       ),
-                      Text(
-                        timeAgoText,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '@$userLogin',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          timeAgoText,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   if (isCurrentUserPost)
                     PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert),
@@ -161,15 +169,17 @@ class PostWidget extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 post['message'],
-                style: const TextStyle(fontSize: 16),
+                style: theme.textTheme.bodyLarge,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               Row(
                 children: [
-                  IconButton(
+                  _ActionButton(
                     icon: isLiked 
-                        ? const Icon(Icons.thumb_up, color: Colors.green)
-                        : const Icon(Icons.thumb_up_outlined),
+                        ? Icons.thumb_up
+                        : Icons.thumb_up_outlined,
+                    color: isLiked ? theme.colorScheme.primary : null,
+                    label: isLiked ? 'Curtido' : 'Curtir',
                     onPressed: () {
                       final postsProvider = context.read<PostsProvider>();
                       if (isLiked) {
@@ -178,12 +188,12 @@ class PostWidget extends StatelessWidget {
                         postsProvider.likePost(post['id']);
                       }
                     },
-                    tooltip: isLiked ? 'Descurtir' : 'Curtir',
                   ),
                   const SizedBox(width: 16),
-                  IconButton(
-                    icon: const Icon(Icons.chat_bubble_outline),
-                    onPressed: () {
+                  _ActionButton(
+                    icon: Icons.chat_bubble_outline,
+                    label: 'Comentar',
+                    onPressed: isInDetailsScreen ? null : () {
                       if (!isInDetailsScreen) {
                         Navigator.push(
                           context,
@@ -196,7 +206,6 @@ class PostWidget extends StatelessWidget {
                         );
                       }
                     },
-                    tooltip: 'Comentários',
                   ),
                 ],
               ),
@@ -204,6 +213,34 @@ class PostWidget extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+  final Color? color;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    this.onPressed,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    return TextButton.icon(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: color ?? theme.colorScheme.onSurface,
+      ),
+      icon: Icon(icon),
+      label: Text(label),
     );
   }
 }

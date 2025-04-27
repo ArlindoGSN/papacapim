@@ -46,21 +46,25 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  void _handleLogout() {
-    final navigator = Navigator.of(context);
-    final authProvider = context.read<AuthProvider>();
-    
-    // Não usa mais await já que não precisamos esperar nada
-    authProvider.logout().then((_) {
-      navigator.pushReplacementNamed('/login');
-    }).catchError((error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao fazer logout: $error'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    });
+  Future<void> _handleLogout() async {
+    try {
+      final navigator = Navigator.of(context);
+      await context.read<AuthProvider>().logout();
+      
+      if (mounted) {
+        // Limpa a pilha de navegação e vai para login
+        navigator.pushNamedAndRemoveUntil('/login', (route) => false);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao fazer logout: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _onScroll() {
@@ -89,35 +93,69 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Papacapim'),
+        title: Text(
+          'Papacapim',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: Icon(_showingFollowingOnly ? Icons.group : Icons.public),
+            icon: Icon(
+              _showingFollowingOnly ? Icons.group : Icons.public,
+              color: theme.colorScheme.primary,
+            ),
             onPressed: _toggleFeed,
             tooltip: _showingFollowingOnly 
               ? 'Mostrando posts de quem você segue'
               : 'Mostrando todos os posts',
           ),
           IconButton(
-            icon: const Icon(Icons.person),
+            icon: Icon(
+              Icons.person,
+              color: theme.colorScheme.primary,
+            ),
             onPressed: () => _navigateToProfile(context),
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: Icon(
+              Icons.logout,
+              color: theme.colorScheme.error,
+            ),
             onPressed: _handleLogout,
           ),
         ],
       ),
       body: Column(
         children: [
-          const PostsSearchBar(),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: theme.shadowColor.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const PostsSearchBar(),
+          ),
           Expanded(
             child: Consumer<PostsProvider>(
               builder: (context, postsProvider, child) {
                 if (postsProvider.posts.isEmpty && postsProvider.isLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
                 }
 
                 if (postsProvider.error != null && postsProvider.posts.isEmpty) {
@@ -125,16 +163,22 @@ class _FeedScreenState extends State<FeedScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: theme.colorScheme.error,
+                        ),
+                        const SizedBox(height: 16),
                         Text(
                           'Erro ao carregar posts: ${postsProvider.error}',
                           textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyLarge,
                         ),
                         const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            postsProvider.loadPosts(refresh: true);
-                          },
-                          child: const Text('Tentar novamente'),
+                        ElevatedButton.icon(
+                          onPressed: () => postsProvider.loadPosts(refresh: true),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Tentar novamente'),
                         ),
                       ],
                     ),
@@ -177,7 +221,7 @@ class _FeedScreenState extends State<FeedScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(
             context,
@@ -186,7 +230,8 @@ class _FeedScreenState extends State<FeedScreen> {
             ),
           );
         },
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('Nova Postagem'),
       ),
     );
   }

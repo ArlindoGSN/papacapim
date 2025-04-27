@@ -41,12 +41,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await _loadProfile();
   }
 
-  // Botão de seguir/deixar de seguir
+  Widget _buildStatistic(BuildContext context, String value, String label) {
+    final theme = Theme.of(context);
+    
+    return Column(
+      children: [
+        Text(
+          value,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          label,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildFollowButton(ProfileProvider profile, String userLogin) {
-    return ElevatedButton(
+    return ElevatedButton.icon(
       onPressed: () async {
         try {
-          await profile.followUser(userLogin);
+          if (profile.profile?['following'] == true) {
+            await profile.unfollowUser(userLogin);
+          } else {
+            await profile.followUser(userLogin);
+          }
         } catch (e) {
           if (!mounted) return;
           
@@ -58,17 +82,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
       },
-      child: Text(
-        profile.profile?['following'] == true ? 'Deixar de Seguir' : 'Seguir'
+      icon: Icon(
+        profile.profile?['following'] == true
+            ? Icons.person_remove
+            : Icons.person_add,
+      ),
+      label: Text(
+        profile.profile?['following'] == true
+            ? 'Deixar de Seguir'
+            : 'Seguir',
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Perfil'),
+        title: Text(
+          'Perfil',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: [
           Consumer<ProfileProvider>(
             builder: (context, profile, child) {
@@ -134,38 +172,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           return Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
+              Container(
+                padding: const EdgeInsets.all(24.0),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.shadowColor.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
                 child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 40,
-                      child: Text(
-                        profileProvider.profile!['login'][0].toUpperCase(),
-                        style: const TextStyle(fontSize: 32),
+                    Hero(
+                      tag: 'profile-${profileProvider.profile!['login']}',
+                      child: CircleAvatar(
+                        radius: 48,
+                        backgroundColor: theme.colorScheme.primary,
+                        child: Text(
+                          profileProvider.profile!['login'][0].toUpperCase(),
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            color: theme.colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       profileProvider.profile!['name'],
-                      style: const TextStyle(
-                        fontSize: 24,
+                      style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text('@${profileProvider.profile!['login']}'),
+                    Text(
+                      '@${profileProvider.profile!['login']}',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          '${profileProvider.profile!['followers_count']} seguidores',
-                          style: const TextStyle(color: Colors.grey),
+                        _buildStatistic(
+                          context,
+                          profileProvider.profile!['followers_count'].toString(),
+                          'seguidores',
                         ),
-                        const SizedBox(width: 16),
-                        Text(
-                          '${profileProvider.profile!['following_count']} seguindo',
-                          style: const TextStyle(color: Colors.grey),
+                        const SizedBox(width: 32),
+                        _buildStatistic(
+                          context,
+                          profileProvider.profile!['following_count'].toString(),
+                          'seguindo',
                         ),
                       ],
                     ),
@@ -176,13 +237,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
-              const Divider(),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: _refreshProfile,
                   child: profileProvider.posts.isEmpty
-                      ? const Center(
-                          child: Text('Nenhum post encontrado'),
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.post_add_outlined,
+                                size: 64,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Nenhum post encontrado',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
                         )
                       : ListView.builder(
                           itemCount: profileProvider.posts.length,
