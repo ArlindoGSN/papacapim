@@ -64,9 +64,9 @@ class AuthProvider extends ChangeNotifier {
     try {
       final updatedUser = await UserService.updateUser(name, password: password);
       _user = updatedUser;
+      _error = null;
     } catch (e) {
       _error = 'Falha ao atualizar perfil: ${e.toString()}';
-      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
