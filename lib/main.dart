@@ -6,6 +6,7 @@ import 'package:papacapim/providers/auth_provider.dart';
 import 'package:papacapim/providers/posts_provider.dart';
 import 'package:papacapim/providers/profile_provider.dart';
 import 'package:papacapim/providers/post_details_provider.dart';
+import 'package:papacapim/providers/reply_provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 void main() {
@@ -27,6 +28,7 @@ class PapacapimApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PostsProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
         ChangeNotifierProvider(create: (_) => PostDetailsProvider()),
+        ChangeNotifierProvider(create: (_) => ReplyProvider()),
       ],
       child: MaterialApp(
         title: 'Papacapim',
