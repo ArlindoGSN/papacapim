@@ -97,22 +97,48 @@ class _FeedScreenState extends State<FeedScreen> {
     
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Papacapim',
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+        scrolledUnderElevation: 2,
+        title: Row(
+          children: [
+            Hero(
+              tag: 'app_logo',
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.nature,
+                  color: theme.colorScheme.primary,
+                  size: 24,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Papacapim',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ],
         ),
         actions: [
-          IconButton(
-            icon: Icon(
-              _showingFollowingOnly ? Icons.group : Icons.public,
-              color: theme.colorScheme.primary,
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: IconButton(
+              key: ValueKey(_showingFollowingOnly),
+              icon: Icon(
+                _showingFollowingOnly ? Icons.group : Icons.public,
+                color: theme.colorScheme.primary,
+              ),
+              onPressed: _toggleFeed,
+              tooltip: _showingFollowingOnly 
+                ? 'Mostrando posts de quem você segue'
+                : 'Mostrando todos os posts',
             ),
-            onPressed: _toggleFeed,
-            tooltip: _showingFollowingOnly 
-              ? 'Mostrando posts de quem você segue'
-              : 'Mostrando todos os posts',
           ),
           IconButton(
             icon: Icon(
@@ -120,6 +146,7 @@ class _FeedScreenState extends State<FeedScreen> {
               color: theme.colorScheme.primary,
             ),
             onPressed: () => _navigateToProfile(context),
+            tooltip: 'Seu perfil',
           ),
           IconButton(
             icon: Icon(
@@ -127,21 +154,23 @@ class _FeedScreenState extends State<FeedScreen> {
               color: theme.colorScheme.error,
             ),
             onPressed: _handleLogout,
+            tooltip: 'Sair',
           ),
         ],
       ),
       body: Column(
         children: [
+          // Barra de pesquisa com estilo melhorado
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: 16.0,
-              vertical: 8.0,
+              vertical: 12.0,
             ),
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
               boxShadow: [
                 BoxShadow(
-                  color: theme.shadowColor.withOpacity(0.1),
+                  color: theme.shadowColor.withOpacity(0.05),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -149,45 +178,101 @@ class _FeedScreenState extends State<FeedScreen> {
             ),
             child: const PostsSearchBar(),
           ),
+          // Lista de posts com estados melhorados
           Expanded(
             child: Consumer<PostsProvider>(
               builder: (context, postsProvider, child) {
                 if (postsProvider.posts.isEmpty && postsProvider.isLoading) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
-
-                if (postsProvider.error != null && postsProvider.posts.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 48,
-                          color: theme.colorScheme.error,
+                        CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            theme.colorScheme.primary,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Erro ao carregar posts: ${postsProvider.error}',
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodyLarge,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: () => postsProvider.loadPosts(refresh: true),
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Tentar novamente'),
+                          'Carregando posts...',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     ),
                   );
                 }
 
+                if (postsProvider.error != null && postsProvider.posts.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: theme.colorScheme.error,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Ops! Algo deu errado',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: theme.colorScheme.error,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            postsProvider.error!,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          FilledButton.icon(
+                            onPressed: () => postsProvider.loadPosts(refresh: true),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Tentar novamente'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
                 if (postsProvider.posts.isEmpty) {
-                  return const Center(
-                    child: Text('Nenhuma postagem encontrada'),
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.post_add,
+                          size: 64,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Nenhuma postagem encontrada',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _showingFollowingOnly 
+                            ? 'Siga outros usuários para ver seus posts'
+                            : 'Seja o primeiro a postar algo!',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 }
 
@@ -195,15 +280,19 @@ class _FeedScreenState extends State<FeedScreen> {
                   onRefresh: () => postsProvider.loadPosts(refresh: true),
                   child: ListView.builder(
                     controller: _scrollController,
+                    padding: const EdgeInsets.only(bottom: 80),
                     itemCount: postsProvider.posts.length + 1,
                     itemBuilder: (context, index) {
                       if (index == postsProvider.posts.length) {
                         if (!postsProvider.hasMorePosts) {
-                          return const Padding(
-                            padding: EdgeInsets.all(16.0),
+                          return Padding(
+                            padding: const EdgeInsets.all(16.0),
                             child: Text(
-                              'Não há mais postagens para carregar',
+                              'Não há mais posts para carregar',
                               textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           );
                         }
@@ -212,7 +301,16 @@ class _FeedScreenState extends State<FeedScreen> {
                         }
                         return const SizedBox.shrink();
                       }
-                      return PostWidget(post: postsProvider.posts[index]);
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 8.0,
+                        ),
+                        child: PostWidget(
+                          post: postsProvider.posts[index],
+                          key: ValueKey(postsProvider.posts[index]['id']),
+                        ),
+                      );
                     },
                   ),
                 );
@@ -232,6 +330,9 @@ class _FeedScreenState extends State<FeedScreen> {
         },
         icon: const Icon(Icons.add),
         label: const Text('Nova Postagem'),
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
+        elevation: 4,
       ),
     );
   }
